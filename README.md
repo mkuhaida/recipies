@@ -25,25 +25,26 @@
 
 Схема:
 ```
-CREATE TABLE `Users` (
-  `Id` char(36) PRIMARY KEY NOT NULL,
-  `FullName` text NOT NULL,
-  `Email` text NOT NULL,
-  `Phone` text NOT NULL,
-  `BirthDate` date NOT NULL,
-  `UserLevel` int NOT NULL
+CREATE TABLE Users (
+  Id TEXT PRIMARY KEY NOT NULL,
+  FullName TEXT NOT NULL,
+  Email TEXT NOT NULL,
+  Phone TEXT NOT NULL,
+  BirthDate DATE NOT NULL,
+  UserLevel INTEGER NOT NULL
 );
 
-CREATE TABLE `Recipe` (
-  `Id` char(36) PRIMARY KEY NOT NULL,
-  `UserId` char(36),
-  `Name` text NOT NULL,
-  `Description` longtext NOT NULL,
-  `DifficultyLevel` decimal(4, 2) NOT NULL,
-  `CreatedAt` datetime(6) NOT NULL,
-  `Section` int NOT NULL,
-  CONSTRAINT `FK_UserId` FOREIGN KEY (`UserId`) REFERENCES `Users` (`Id`) ON DELETE SET NULL
+CREATE TABLE Recipe (
+  Id TEXT PRIMARY KEY NOT NULL,
+  UserId TEXT,
+  Name TEXT NOT NULL,
+  Description TEXT NOT NULL,
+  DifficultyLevel DECIMAL(4, 2) NOT NULL,
+  CreatedAt DATETIME NOT NULL,
+  Section INTEGER NOT NULL,
+  FOREIGN KEY (UserId) REFERENCES Users (Id) ON DELETE SET NULL
 );
+
 ```
 
 **Пример заполненных таблиц**
