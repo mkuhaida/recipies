@@ -1,0 +1,440 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Resource Management</title>
+    <style>
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            margin-top: 20px;
+        }
+
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #f2f2f2;
+            cursor: pointer;
+        }
+
+        form {
+            margin-top: 20px;
+        }
+
+            form label {
+                display: block;
+                margin-bottom: 8px;
+            }
+
+            form input, form select, form textarea {
+                margin-bottom: 12px;
+            }
+
+            form button {
+                padding: 8px;
+            }
+    </style>
+</head>
+<body>
+    <h2>Кугайдо Марина Александровна, 4 курс 4 группа, 2023 год</h2>
+
+    <select id="resourceSelector" onchange="loadData()">
+        <option value="users">Users</option>
+        <option value="recipes">Recipes</option>
+    </select>
+    <button onclick="createRecord()">Create Record</button>
+    <div id="createFormContainer"></div>
+    <div id="dataContainer"></div>
+    <script>
+        function loadData() {
+            var resource = document.getElementById("resourceSelector").value;
+            var xhr = new XMLHttpRequest();
+            xhr.onreadystatechange = function () {
+                if (xhr.readyState === 4 && xhr.status === 200) {
+                    displayData(JSON.parse(xhr.responseText));
+                }
+            };
+            xhr.open("GET", "/api/" + resource, true);
+            xhr.send();
+        }
+
+        function displayData(data) {
+            var container = document.getElementById("dataContainer");
+            container.innerHTML = "";
+
+            var table = document.createElement("table");
+            var headerRow = table.insertRow(0);
+
+            for (var key in data[0]) {
+                // Skip UserId and Id
+                if (key !== "userId" && key !== "id") {
+                    var th = document.createElement("th");
+                    th.innerHTML = formatColumnName(key);
+                    th.addEventListener("click", function () {
+                        sortTable(table, this.cellIndex);
+                    });
+                    headerRow.appendChild(th);
+                }
+            }
+
+            var actionTh = document.createElement("th");
+            actionTh.innerHTML = "Actions";
+            headerRow.appendChild(actionTh);
+
+            for (var i = 0; i < data.length; i++) {
+                var row = table.insertRow(i + 1);
+                for (var key in data[i]) {
+                    // Skip UserId and Id
+                    if (key !== "userId" && key !== "id") {
+                        var cell = row.insertCell();
+                        cell.innerHTML = key == "birthDate" || key == "createdOn" ? formatDate(data[i][key]) : data[i][key];
+                    }
+                }
+
+                var actionsCell = row.insertCell();
+                actionsCell.innerHTML = `<button onclick="editRecord('${data[i].id}')">Edit</button> <button onclick="deleteRecord('${data[i].id}')">Delete</button>`;
+            }
+
+            container.appendChild(table);
+        }
+
+        // Add sorting function
+        function sortTable(table, columnIndex) {
+            var rows = Array.from(table.rows).slice(1);
+            var ascending = true;
+
+            function customSort(a, b) {
+                var aValue = a.cells[columnIndex].innerHTML.trim();
+                var bValue = b.cells[columnIndex].innerHTML.trim();
+
+                function formatDateForComparison(dateString) {
+                    var dateParts = dateString.split('.');
+                    var formattedDate = dateParts[2] + dateParts[1] + dateParts[0];
+                    return formattedDate;
+                }
+
+                if (isValidDate(aValue) && isValidDate(bValue)) {
+                    var formattedA = formatDateForComparison(aValue);
+                    var formattedB = formatDateForComparison(bValue);
+                    return ascending ? formattedA.localeCompare(formattedB) : formattedB.localeCompare(formattedA);
+                } else {
+                    return ascending ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
+                }
+            }
+
+            rows.sort(customSort);
+
+            rows.forEach(function (row) {
+                table.appendChild(row);
+            });
+
+            ascending = !ascending;
+        }
+
+
+        // Helper function to format column names
+        function formatColumnName(name) {
+            return name.replace(/([A-Z])/g, ' $1').replace(/^./, function (str) { return str.toUpperCase(); });
+        }
+
+        // Helper function to format date
+        function formatDate(dateString) {
+            var date = new Date(dateString);
+            var day = date.getDate().toString().padStart(2, '0');
+            var month = (date.getMonth() + 1).toString().padStart(2, '0');
+            var year = date.getFullYear();
+            return day + '.' + month + '.' + year;
+        }
+
+        // Helper function to validate date format
+        function isValidDate(dateString) {
+            var regex = /^\d{2}\.\d{2}\.\d{4}$/;
+            return dateString.match(regex) !== null;
+        }
+
+        // Function to handle editing a record
+        function editRecord(id) {
+            var resource = document.getElementById("resourceSelector").value;
+
+            var createFormContainer = document.getElementById("createFormContainer");
+            createFormContainer.innerHTML = ""; // Clear the create/edit form
+
+            var form = document.createElement("form");
+
+            var xhr = new XMLHttpRequest();
+            xhr.onreadystatechange = function () {
+                if (xhr.readyState === 4 && xhr.status === 200) {
+                    var existingData = JSON.parse(xhr.responseText);
+
+                    // Dynamically generate form fields based on the resource (user or recipe)
+                    if (resource === "users") {
+                        // User form fields
+                        form.innerHTML = `
+                    <label for="fullName">Full Name:</label>
+                    <input type="text" id="fullName" name="fullName" value="${existingData.fullName}" required>
+
+                    <label for="email">Email:</label>
+                    <input type="email" id="email" name="email" value="${existingData.email}" required>
+
+                    <label for="phone">Phone:</label>
+                    <input type="text" id="phone" name="phone" value="${existingData.phone}" required>
+
+                    <label for="birthDate">Birth Date:</label>
+                    <input type="date" id="birthDate" name="birthDate" value="${formatDate(existingData.birthDate)}" required>
+
+                    <label for="userLevel">User Level:</label>
+                    <select id="userLevel" name="userLevel" required>
+                        <option value="Beginner">Beginner</option>
+                        <option value="Advanced">Advanced</option>
+                        <option value="Experienced">Experienced</option>
+                        <option value="Pro">Pro</option>
+                        <option value="Master">Master</option>
+                    </select>
+                `;
+                        // Set the selected option based on existing data
+                        form.querySelector(`#userLevel option[value="${existingData.userLevel}"]`).selected = true;
+                    } else if (resource === "recipes") {
+                        // Recipe form fields
+                        form.innerHTML = `
+                    <label for="name">Name:</label>
+                    <input type="text" id="name" name="name" value="${existingData.name}" required>
+
+                    <label for="description">Description:</label>
+                    <textarea id="description" name="description" required>${existingData.description}</textarea>
+
+                    <label for="difficultyLevel">Difficulty Level:</label>
+                    <input type="number" id="difficultyLevel" name="difficultyLevel" value="${existingData.difficultyLevel}" required>
+
+                    <label for="section">Section:</label>
+                    <select id="section" name="section" required>
+                        <option value="Breakfasts">Breakfasts</option>
+                        <option value="Lunches">Lunches</option>
+                        <option value="Dinners">Dinners</option>
+                        <option value="Desserts">Desserts</option>
+                        <option value="Snacks">Snacks</option>
+                    </select>
+
+                    <label for="userId">User:  ${existingData.userName}</label>
+                `;
+                        // Set the selected option based on existing data
+                        form.querySelector(`#section option[value="${existingData.section}"]`).selected = true;
+                    }
+
+                    form.innerHTML += `
+                <button onclick="submitEditForm('${resource}', '${id}')">Update</button>
+                <button onclick="cancelEditForm()">Cancel</button>
+            `;
+
+                    createFormContainer.appendChild(form);
+
+                    // Load existing users for the recipe form
+                    
+                }
+            };
+            xhr.open("GET", `/api/${resource}/${id}`, true);
+            xhr.send();
+        }
+
+        // Function to handle submitting the edit form
+        function submitEditForm(resource, id) {
+            var formData = {};
+            var formElements = document.querySelectorAll(`#createFormContainer form input, #createFormContainer form select, #createFormContainer form textarea`);
+
+            formElements.forEach(function (element) {
+                formData[element.name] = element.value;
+            });
+            formData["id"] = id;
+            var xhr = new XMLHttpRequest();
+            xhr.onreadystatechange = function () {
+                if (xhr.readyState === 4) {
+                    if (xhr.status === 200) {
+                        alert("Record updated successfully.");
+                        loadData();
+                        cancelEditForm(); // Clear the create/edit form
+                    } else {
+                        alert("Failed to update record.");
+                    }
+                }
+            };
+
+            if (resource === "users") {
+                xhr.open("PUT", "/api/users", true);
+            } else if (resource === "recipes") {
+                xhr.open("PUT", "/api/recipes", true);
+            }
+
+            xhr.setRequestHeader("Content-Type", "application/json");
+            xhr.send(JSON.stringify(formData));
+        }
+
+        // Function to cancel the edit form and go back to the table view
+        function cancelEditForm() {
+            var createFormContainer = document.getElementById("createFormContainer");
+            createFormContainer.innerHTML = ""; // Clear the create/edit form
+        }
+
+
+        // Function to handle deleting a record
+        function deleteRecord(id) {
+            var resource = document.getElementById("resourceSelector").value;
+
+            if (confirm("Are you sure you want to delete this record?")) {
+                var xhr = new XMLHttpRequest();
+                xhr.onreadystatechange = function () {
+                    if (xhr.readyState === 4) {
+                        if (xhr.status === 200) {
+                            alert("Record deleted successfully.");
+                            loadData();
+                        } else {
+                            alert("Failed to delete record.");
+                        }
+                    }
+                };
+                xhr.open("DELETE", "/api/" + resource + "/" + id, true);
+                xhr.send();
+            }
+        }
+
+        // Function to handle creating a new record
+        function createRecord() {
+            var resource = document.getElementById("resourceSelector").value;
+
+            var createFormContainer = document.getElementById("createFormContainer");
+            createFormContainer.innerHTML = ""; // Clear the create/edit form
+
+            var form = document.createElement("form");
+
+            // Dynamically generate form fields based on the resource (user or recipe)
+            if (resource === "users") {
+                // User form fields
+                form.innerHTML = `
+                                <label for="fullName">Full Name:</label>
+                                <input type="text" id="fullName" name="fullName" required>
+
+                                <label for="email">Email:</label>
+                                <input type="email" id="email" name="email" required>
+
+                                <label for="phone">Phone:</label>
+                                <input type="text" id="phone" name="phone" required>
+
+                                <label for="birthDate">Birth Date:</label>
+                                <input type="date" id="birthDate" name="birthDate" required>
+
+                                <label for="userLevel">User Level:</label>
+                                <select id="userLevel" name="userLevel" required>
+                                    <option value="Beginner">Beginner</option>
+                                    <option value="Advanced">Advanced</option>
+                                    <option value="Experienced">Experienced</option>
+                                    <option value="Pro">Pro</option>
+                                    <option value="Master">Master</option>
+                                </select>
+                            `;
+            } else if (resource === "recipes") {
+                // Recipe form fields
+                form.innerHTML = `
+                                <label for="name">Name:</label>
+                                <input type="text" id="name" name="name" required>
+
+                                <label for="description">Description:</label>
+                                <textarea id="description" name="description" required></textarea>
+
+                                <label for="difficultyLevel">Difficulty Level:</label>
+                                <input type="number" id="difficultyLevel" name="difficultyLevel" required>
+
+                                <label for="section">Section:</label>
+                                <select id="section" name="section" required>
+                                    <option value="Breakfasts">Breakfasts</option>
+                                    <option value="Lunches">Lunches</option>
+                                    <option value="Dinners">Dinners</option>
+                                    <option value="Desserts">Desserts</option>
+                                    <option value="Snacks">Snacks</option>
+                                </select>
+
+                                <label for="userId">User:</label>
+                                <select id="userId" name="userId" required>
+                                    <!-- You can dynamically populate this dropdown with existing users -->
+                                </select>
+                            `;
+            }
+
+            form.innerHTML += `
+                            <button onclick="submitCreateForm('${resource}')">Create</button>
+                            <button onclick="cancelCreateForm()">Cancel</button>
+                        `;
+
+            createFormContainer.appendChild(form);
+
+            // Load existing users for the recipe form
+            if (resource === "recipes") {
+                loadUsersForRecipeForm();
+            }
+        }
+
+        // Function to load existing users for the recipe form
+        function loadUsersForRecipeForm() {
+            var userIdSelect = document.getElementById("userId");
+
+            var xhr = new XMLHttpRequest();
+            xhr.onreadystatechange = function () {
+                if (xhr.readyState === 4 && xhr.status === 200) {
+                    var users = JSON.parse(xhr.responseText);
+                    users.forEach(function (user) {
+                        var option = document.createElement("option");
+                        option.value = user.id;
+                        option.text = user.fullName;
+                        userIdSelect.add(option);
+                    });
+                }
+            };
+            xhr.open("GET", "/api/users", true);
+            xhr.send();
+        }
+
+        // Function to handle submitting the create form
+        function submitCreateForm(resource) {
+            var formData = {};
+            var formElements = document.querySelectorAll(`#createFormContainer form input, #createFormContainer form select, #createFormContainer form textarea`);
+
+            formElements.forEach(function (element) {
+                formData[element.name] = element.value;
+            });
+
+            var xhr = new XMLHttpRequest();
+            xhr.onreadystatechange = function () {
+                if (xhr.readyState === 4) {
+                    if (xhr.status === 200) {
+                        alert("Record created successfully.");
+                        loadData();
+                        //cancelCreateForm(); // Clear the create/edit form
+                    } else {
+                        alert("Failed to create record.");
+                    }
+                }
+            };
+
+            if (resource === "users") {
+                xhr.open("POST", "/api/users", true);
+            } else if (resource === "recipes") {
+                xhr.open("POST", "/api/recipes/" + formData["userId"], true);
+            }
+
+            xhr.setRequestHeader("Content-Type", "application/json");
+            xhr.send(JSON.stringify(formData));
+        }
+
+        // Function to cancel the create/edit form and go back to the table view
+        function cancelCreateForm() {
+            var createFormContainer = document.getElementById("createFormContainer");
+            createFormContainer.innerHTML = ""; // Clear the create/edit form
+        }
+
+        // Initial data load
+        loadData();
+    </script>
+</body>
+</html>
