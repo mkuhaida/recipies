@@ -21,7 +21,7 @@
 - Дата создания рецепта
 
 ## Шаг 2.
-СУБД - MySQL.
+СУБД - SQLite.
 
 Схема:
 ```
@@ -68,3 +68,7 @@ CREATE TABLE Recipe (
 | 92577cc2-8cb7-11ee-a4a2-80e82c270b17 | Berezina Alisa Arsenovna     | berezina.alisa@gmail.com     | +375(44)257-59-17 | 1999-02-28 | 3  |
 | 92577e08-8cb7-11ee-a4a2-80e82c270b17 | Arkhipov Makar Dmitrievich   | makar9876@mail.ru            | +375(33)459-56-68 | 1990-10-18 | 4  |
 | 92577f7b-8cb7-11ee-a4a2-80e82c270b17 | Gavrilov Nikolay Vasilyevich | gavrilov.nikolay3456@mail.ru | +375(29)089-34-78 | 1995-01-22 | 5  |
+
+## Шаг 3.
+
+Для запуска приложения необходимо скачать publish.zip и разархивировать его. Из папки запустить файл Recipes.exe. После чего по адресам https://localhost:7031 и http://localhost:5196 будет доступен сайт.
